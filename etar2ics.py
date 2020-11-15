@@ -7,6 +7,7 @@ import pytz
 import uuid
 import dateparser
 
+
 from dateutil.tz import UTC
 from dateutil.rrule import rrulestr, rruleset
 
@@ -14,6 +15,10 @@ from sqlite3 import Error
 from icalendar import Calendar, Event
 from datetime import datetime
 from pytz import UTC # timezone
+from datetime import date
+from datetime import time
+from datetime import timedelta
+from icalendar.parser import Parameters
 
 
 def create_connection(db_file):
@@ -40,13 +45,22 @@ def assignifpossible(event, key, value):
 def parse_rrule(rrule_str):
     rrule = {}
     if rrule_str and rrule_str != 'None':
-        print(rrule_str)
+        print("rrule_str: " +  rrule_str)
         for val in rrule_str.split(';'):
             print(val.split('='))
             v = val.split('=')
             if v[0] == 'UNTIL':
                 tmp = dateparser.parse(v[1], date_formats=["%Y%m%dT%H%M%SZ"])
+                if not tmp:
+                    tmp = dateparser.parse(v[1], date_formats=["%Y%m%dT%H%M%S"])
+                if not tmp:
+                    tmp = dateparser.parse(v[1], date_formats=["%Y%m%d"])
                 v[1] = tmp
+            if v[0] == 'BYDAY':
+                 # tmp = v[1].replace('MO', '1').replace('TU', '2').replace('WE', '3').replace('TH', '4').replace('FR', '5').replace('SA', '6').replace('SU', '7')
+                 tmp = list(map(icalendar.vWeekday, v[1].split(',')))
+                 print("tmp: " + str(tmp))
+                 v[1] = tmp
             rrule[v[0]] = v[1]
         print(rrule)
     
@@ -69,11 +83,11 @@ def select_all_tasks(conn):
         cur.execute("SELECT * FROM view_events where calendar_id=" +
                     calendar_name)
         rows = cur.fetchall()
-        cal = Calendar()
-        cal.add('prodid', '-//My calendar product//mxm.dk//')
-        cal.add('version', '2.0')
 
         for row in rows:
+            cal = Calendar()
+            cal.add('prodid', '-//My calendar product//mxm.dk//')
+            cal.add('version', '2.0')
             event = Event()
             title = str(row[1])
             location = str(row[3])
@@ -87,59 +101,59 @@ def select_all_tasks(conn):
                 dtend = int(row[9]/1000)
                 event.add('dtend',  datetime.utcfromtimestamp(dtend))
 
-
-# 1  _id
-# 2  title
-# 3  description
-# 4  eventLocation
-# 5  eventColor
-# 6  eventColor_index
-# 7  eventStatus
-# 8  selfAttendeeStatus
-# 9  dtstart
-# 10 dtend
-# 11 duration
-# 12 eventTimezone
-# 13 eventEndTimezone
-# 14 allDay
-# 15 accessLevel
-# 16 availability
-# 17 hasAlarm
-# 18 hasExtendedProperties
-# 19 rrule
-# 20 rdate
-# 21 exrule
-# 22 exdate
-# 23 original_sync_id
-# 24 original_id
-# 25 originalInstanceTime
-# 26 originalAllDay
-# 27 lastDate
-# 28 hasAttendeeData
-# 29 calendar_id
-# 30 guestsCanInviteOthers
-# 31 guestsCanModify
-# 32 guestsCanSeeGuests
-# 33 organizer
-# 34 isOrganizer
-# 35 customAppPackage
-# 36 customAppUri
-# 37 uid2445
-# 38 sync_data1,sync_data2,sync_data3,sync_data4,sync_data5,sync_data6,sync_data7,sync_data8,sync_data9,sync_data10,
-# 48 comment
-# 49 deleted
-# 50 _sync_id
-# 51 dirty
-# 52 mutators
-# 53 lastSynced
-# 54 account_name
-# 55 account_type
-# 56 calendar_timezone
-# 57 calendar_displayName
-# 58 calendar_location,visible,calendar_color,calendar_color_index,calendar_access_level,maxReminders,allowedReminders
-# 65 allowedAttendeeTypes,allowedAvailability,canOrganizerRespond,canModifyTimeZone,canPartiallyUpdate
-# 70 cal_sync1,cal_sync2,cal_sync3,cal_sync4,cal_sync5,cal_sync6,cal_sync7,cal_sync8,cal_sync9,cal_sync10
-# 80 ownerAccount,sync_events,displayColor)
+# columns in view_events
+# 0  _id
+# 1  title
+# 2  description
+# 3  eventLocation
+# 4  eventColor
+# 5  eventColor_index
+# 6  eventStatus
+# 7  selfAttendeeStatus
+# 8  dtstart
+# 9 dtend
+# 10 duration
+# 11 eventTimezone
+# 12 eventEndTimezone
+# 13 allDay
+# 14 accessLevel
+# 15 availability
+# 16 hasAlarm
+# 17 hasExtendedProperties
+# 18 rrule
+# 19 rdate
+# 20 exrule
+# 21 exdate
+# 22 original_sync_id
+# 23 original_id
+# 24 originalInstanceTime
+# 25 originalAllDay
+# 26 lastDate
+# 27 hasAttendeeData
+# 28 calendar_id
+# 29 guestsCanInviteOthers
+# 30 guestsCanModify
+# 31 guestsCanSeeGuests
+# 32 organizer
+# 33 isOrganizer
+# 34 customAppPackage
+# 35 customAppUri
+# 36 uid2445
+# 37 data1,sync_data2,sync_data3,sync_data4,sync_data5,sync_data6,sync_data7,sync_data8,sync_data9,sync_data10,
+# 47 comment
+# 48 deleted
+# 49 _sync_id
+# 50 dirty
+# 51 mutators
+# 52 lastSynced
+# 53 account_name
+# 54 account_type
+# 55 calendar_timezone
+# 56 calendar_displayName
+# 57 calendar_location,visible,calendar_color,calendar_color_index,calendar_access_level,maxReminders,allowedReminders
+# 64 allowedAttendeeTypes,allowedAvailability,canOrganizerRespond,canModifyTimeZone,canPartiallyUpdate
+# 69 cal_sync1,cal_sync2,cal_sync3,cal_sync4,cal_sync5,cal_sync6,cal_sync7,cal_sync8,cal_sync9,cal_sync10
+# 79 ownerAccount,sync_events,displayColor)
 
             if row[10]:
                 event.add('event_timezone', row[10])
@@ -157,14 +171,14 @@ def select_all_tasks(conn):
             if row[18]:
                 print("row 18: " + row[18])
                 
-                rules = rruleset()
-                print("dtstart: " + str(event.get('dtstart')) +  " tz: " + str(event.get('dtstart') ))
-                tmp = datetime.utcfromtimestamp(dtstart)
-                first_rule = rrulestr(row[18], dtstart=event.get('dtstart').dt)
-                if first_rule._until and first_rule._until.tzinfo is None:
-                    first_rule._until = first_rule._until.replace(tzinfo=UTC)
-                print(str(first_rule))
-                event.add('rrule', str(first_rule))
+                # rules = rruleset()
+                # print("dtstart: " + str(event.get('dtstart')) +  " tz: " + str(event.get('dtstart') ))
+                #first_rule = rrulestr(row[18], dtstart=event.get('dtstart').dt)
+                #if first_rule._until and first_rule._until.tzinfo is None:
+                #    print("replacing timezone info")
+                #    first_rule._until = first_rule._until.replace(tzinfo=UTC)
+                #print(str(first_rule))
+                event.add('rrule', parse_rrule(row[18]))
 
             if row[36]:
                 event['uid'] = row[36]
@@ -176,9 +190,9 @@ def select_all_tasks(conn):
 
             cal.add_component(event)
 
-        f = open(calendar_row[6] + '.ics', 'wb')
-        f.write(cal.to_ical())
-        f.close()
+            f = open(str(event['uid']) + '.ics', 'wb')
+            f.write(cal.to_ical())
+            f.close()
             
 def main():
     database = r"/tmp/calendar.db"
