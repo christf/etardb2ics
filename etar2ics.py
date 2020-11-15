@@ -179,15 +179,7 @@ def select_all_tasks(conn):
             event = assignrdateifpossible(event, row[19])
             event = assignifpossible(event, 'comment', row[47])
             if row[18]:
-                print("row 18: " + row[18])
-                
-                # rules = rruleset()
-                # print("dtstart: " + str(event.get('dtstart')) +  " tz: " + str(event.get('dtstart') ))
-                #first_rule = rrulestr(row[18], dtstart=event.get('dtstart').dt)
-                #if first_rule._until and first_rule._until.tzinfo is None:
-                #    print("replacing timezone info")
-                #    first_rule._until = first_rule._until.replace(tzinfo=UTC)
-                #print(str(first_rule))
+                # print("row 18: " + row[18])
                 event.add('rrule', parse_rrule(row[18]))
 
             if row[36]:
@@ -204,7 +196,7 @@ def select_all_tasks(conn):
             df = open(str(event['uid']) + '.ics', 'wb')
             df.write(debugcal.to_ical())
             df.close()
-        f = open(str(calendar_row[0]) + '.ics', 'wb')
+        f = open(str(calendar_row[6]).replace("/","") + '.ics', 'wb')
         f.write(cal.to_ical())
         f.close()
 
