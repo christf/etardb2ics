@@ -35,9 +35,23 @@ def create_connection(db_file):
 
     return conn
 
+def assignrdateifpossible(event, value):
+    if value and value != 'None':
+        # print("rdate : " + value)
+        # event.add(key, datetime.utcfromtimestamp(value))
+        tmp = []
+        for i in value.split(','):
+            tmp.append(dateparser.parse(i, date_formats=["%Y%m%dT%H%M%SZ","%Y%m%dT%H%M%S", "%Y%m%d"]))
+
+
+        tmp.pop(0)
+        # print("rdate : " + str(tmp))
+        event.add('rdate', tmp )
+    return event
+
 def assignifpossible(event, key, value):
     if value and value != 'None':
-        print(key + ": " + value)
+        # print(key + ": " + value)
         # event.add(key, datetime.utcfromtimestamp(value))
         event.add(key, value)
     return event
@@ -45,24 +59,17 @@ def assignifpossible(event, key, value):
 def parse_rrule(rrule_str):
     rrule = {}
     if rrule_str and rrule_str != 'None':
-        print("rrule_str: " +  rrule_str)
+        # print("rrule_str: " +  rrule_str)
         for val in rrule_str.split(';'):
             print(val.split('='))
             v = val.split('=')
-            if v[0] == 'UNTIL':
-                tmp = dateparser.parse(v[1], date_formats=["%Y%m%dT%H%M%SZ"])
-                if not tmp:
-                    tmp = dateparser.parse(v[1], date_formats=["%Y%m%dT%H%M%S"])
-                if not tmp:
-                    tmp = dateparser.parse(v[1], date_formats=["%Y%m%d"])
+            if v[0] == 'UNTIL': # it would be much easier if the time format was specified. Since it does not seem to be, we need to try parsing different common formats
+                tmp = dateparser.parse(v[1], date_formats=["%Y%m%dT%H%M%SZ",  "%Y%m%dT%H%M%S", "%Y%m%d"])
                 v[1] = tmp
             if v[0] == 'BYDAY':
-                 # tmp = v[1].replace('MO', '1').replace('TU', '2').replace('WE', '3').replace('TH', '4').replace('FR', '5').replace('SA', '6').replace('SU', '7')
                  tmp = list(map(icalendar.vWeekday, v[1].split(',')))
-                 print("tmp: " + str(tmp))
                  v[1] = tmp
             rrule[v[0]] = v[1]
-        print(rrule)
     
     return rrule
 
@@ -83,11 +90,14 @@ def select_all_tasks(conn):
         cur.execute("SELECT * FROM view_events where calendar_id=" +
                     calendar_name)
         rows = cur.fetchall()
+        cal = Calendar()
+        cal.add('prodid', '-//My calendar product//mxm.dk//')
+        cal.add('version', '2.0')
 
         for row in rows:
-            cal = Calendar()
-            cal.add('prodid', '-//My calendar product//mxm.dk//')
-            cal.add('version', '2.0')
+            debugcal = Calendar()
+            debugcal.add('prodid', '-//My calendar product//mxm.dk//')
+            debugcal.add('version', '2.0')
             event = Event()
             title = str(row[1])
             location = str(row[3])
@@ -166,7 +176,7 @@ def select_all_tasks(conn):
                 event.add('description', row[2])
             
             event.add('dtstamp', datetime(2020,11,14,0,10,0,tzinfo=UTC)) # creation time of event
-            event = assignifpossible(event, 'rdate', row[19])
+            event = assignrdateifpossible(event, row[19])
             event = assignifpossible(event, 'comment', row[47])
             if row[18]:
                 print("row 18: " + row[18])
@@ -189,11 +199,15 @@ def select_all_tasks(conn):
             print(event)
 
             cal.add_component(event)
+            debugcal.add_component(event)
 
-            f = open(str(event['uid']) + '.ics', 'wb')
-            f.write(cal.to_ical())
-            f.close()
-            
+            df = open(str(event['uid']) + '.ics', 'wb')
+            df.write(debugcal.to_ical())
+            df.close()
+        f = open(str(calendar_row[0]) + '.ics', 'wb')
+        f.write(cal.to_ical())
+        f.close()
+
 def main():
     database = r"/tmp/calendar.db"
     conn = create_connection(database)
