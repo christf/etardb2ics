@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import sqlite3
 import icalendar
 import datetime 
@@ -89,6 +90,11 @@ def select_all_tasks(conn):
         calendar_name = str(calendar_row[0])
         cur.execute("SELECT * FROM view_events where calendar_id=" +
                     calendar_name)
+        dirname="/tmp/" + str(calendar_row[6]).replace("/","")
+        try:
+            os.mkdir(dirname)
+        except OSError:
+            print ("Creation of the directory %s failed" % dirname)
         rows = cur.fetchall()
         cal = Calendar()
         cal.add('prodid', '-//My calendar product//mxm.dk//')
@@ -165,9 +171,10 @@ def select_all_tasks(conn):
 # 69 cal_sync1,cal_sync2,cal_sync3,cal_sync4,cal_sync5,cal_sync6,cal_sync7,cal_sync8,cal_sync9,cal_sync10
 # 79 ownerAccount,sync_events,displayColor)
 
-            if row[10]:
-                event.add('event_timezone', row[10])
-            event.add('event_timezone', row[11])
+            # do not include event timezone, nextcloud seems to choke on it
+            #if row[10]:
+            #    event.add('event_timezone', row[10])
+            # event.add('event_timezone', row[11])
             # event.add('duration', row[10])
             event.add('allday', row[13])
             print ("calendar_row: " + str(row))
@@ -193,7 +200,7 @@ def select_all_tasks(conn):
             cal.add_component(event)
             debugcal.add_component(event)
 
-            df = open(str(event['uid']) + '.ics', 'wb')
+            df = open(dirname + "/" + str(event['uid']) + '.ics', 'wb')
             df.write(debugcal.to_ical())
             df.close()
         f = open(str(calendar_row[6]).replace("/","") + '.ics', 'wb')
